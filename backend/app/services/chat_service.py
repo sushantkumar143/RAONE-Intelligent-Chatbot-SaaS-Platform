@@ -94,44 +94,64 @@ async def process_chat_message(
     db.add(user_msg)
     await db.flush()
 
-    # 2.5 Perform Vector Retrieval
+    # 2.5 Perform Vector Retrieval + Reranking
     logger.info("Generating query embedding for RAG retrieval...")
     query_embedding = generate_single_embedding(message_text)
     
-    logger.info("Searching vector store...")
+    logger.info("Stage 1: Searching vector store (bi-encoder)...")
     store = VectorStore(company_id=str(company_id))
-    # Fetch top 5 chunks as requested "most of the chunks"
-    retrieved_chunks = store.search(query_embedding, top_k=5) 
+    candidates = store.search(query_embedding, top_k=8) 
+    
+    # Stage 2: Rerank with cross-encoder for precision
+    from app.rag.vector_store import rerank_results
+    retrieved_chunks = rerank_results(message_text, candidates, top_n=5)
     
     # Format retrieved context
     context_str = ""
     sources_used = []
     if retrieved_chunks:
-        logger.info(f"Retrieved {len(retrieved_chunks)} relevant chunks. Augmenting prompt.")
-        context_str = "Context information is below.\n---------------------\n"
+        logger.info(f"Reranking complete. Using top {len(retrieved_chunks)} chunks for prompt augmentation.")
+        context_parts = []
         for i, chunk in enumerate(retrieved_chunks):
-            # Limit the context size a bit per chunk if they are too long
             content = chunk['content']
-            context_str += f"[Source {i+1}: {chunk['source_name']}]\n{content}\n\n"
+            context_parts.append(f"[Source {i+1}: {chunk['source_name']}]\n{content}")
             sources_used.append({
                 "source_name": chunk['source_name'],
-                "relevance_score": chunk['relevance_score'],
-                "content": content[:100] + "..." # Just preview for db
+                "relevance_score": chunk.get('rerank_score', chunk['relevance_score']),
+                "content": content[:100] + "...",
+                "chunk_index": chunk['chunk_index']
             })
-        context_str += "---------------------\n"
+        context_str = "\n\n".join(context_parts)
     else:
         logger.info("No relevant chunks found in the knowledge base.")
 
-    # 3. Prepare message history for LLM
+    # 3. Prepare message history for LLM with STRICT extraction prompt
     history = await get_conversation_messages(db, conversation_id)
     
-    system_prompt = (
-        "You are RAONE, a sophisticated AI assistant capable of answering questions. "
-        "Use the provided context to answer the user's question accurately. "
-        "If you don't know the answer based on the context, say so, but you can also use your general knowledge if appropriate.\n\n"
-    )
+    # Build the system prompt — force the LLM to synthesize, not summarize
     if context_str:
-        system_prompt += context_str
+        system_prompt = (
+            "You are RAONE, an expert AI assistant. "
+            "Answer ONLY using the provided context below.\n\n"
+            "RULES:\n"
+            "- Extract SPECIFIC mechanisms, facts, and details — not general ideas.\n"
+            "- Combine multiple pieces of information from different sources if needed.\n"
+            "- If partial information exists, infer carefully but DO NOT hallucinate.\n"
+            "- If the context does not contain enough information, say \"Insufficient information in the knowledge base.\"\n"
+            "- Always cite which source(s) you used.\n"
+            "- Be precise, direct, and actionable.\n\n"
+            "CONTEXT:\n"
+            "---------------------\n"
+            f"{context_str}\n"
+            "---------------------\n"
+        )
+    else:
+        system_prompt = (
+            "You are RAONE, an expert AI assistant. "
+            "No knowledge base context was found for this query. "
+            "Answer using your general knowledge, but clearly state that "
+            "this answer is NOT from the company's knowledge base.\n"
+        )
 
     llm_messages = [{"role": "system", "content": system_prompt}]
     
@@ -161,7 +181,6 @@ async def process_chat_message(
     )
     db.add(assistant_msg)
 
-    
     # Update conversation timestamp
     conversation.updated_at = func.now()
     
@@ -169,4 +188,5 @@ async def process_chat_message(
     await db.refresh(assistant_msg)
     
     return assistant_msg, conversation_id
+
 
