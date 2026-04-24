@@ -36,7 +36,9 @@ api.interceptors.response.use(
 export const authAPI = {
   signup: (data) => api.post('/auth/signup', data),
   login: (data) => api.post('/auth/login', data),
+  googleLogin: (data) => api.post('/auth/google', data),
   getProfile: () => api.get('/auth/me'),
+  updateProfile: (data) => api.patch('/auth/me', data),
 };
 
 // ── Company API ─────────────────────────────────────

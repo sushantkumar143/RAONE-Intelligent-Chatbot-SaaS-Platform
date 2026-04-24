@@ -22,6 +22,12 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+class GoogleLoginRequest(BaseModel):
+    token: str
+
+class ProfileUpdateRequest(BaseModel):
+    full_name: str = Field(..., min_length=2, max_length=255)
+
 
 # ── Response Schemas ─────────────────────────────────────
 

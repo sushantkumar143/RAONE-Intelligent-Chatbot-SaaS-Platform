@@ -11,6 +11,7 @@ import KnowledgeBasePage from './pages/KnowledgeBasePage';
 import ApiKeysPage from './pages/ApiKeysPage';
 import ChatPage from './pages/ChatPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import ProfilePage from './pages/ProfilePage';
 
 // Layout
 import DashboardLayout from './components/dashboard/DashboardLayout';
@@ -28,10 +29,15 @@ function PublicRoute({ children }) {
   return children;
 }
 
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
 export default function App() {
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-client-id';
+
   return (
-    <AnimatePresence mode="wait">
-      <Routes>
+    <GoogleOAuthProvider clientId={clientId}>
+      <AnimatePresence mode="wait">
+        <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route
@@ -65,11 +71,13 @@ export default function App() {
           <Route path="api-keys" element={<ApiKeysPage />} />
           <Route path="chat" element={<ChatPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
 
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>
+    </GoogleOAuthProvider>
   );
 }

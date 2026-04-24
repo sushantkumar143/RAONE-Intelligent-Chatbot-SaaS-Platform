@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Zap } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 import useAuthStore from '../stores/authStore';
 import toast from 'react-hot-toast';
 
@@ -9,8 +10,19 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, googleLogin, isLoading, error, clearError } = useAuthStore();
   const navigate = useNavigate();
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    clearError();
+    const success = await googleLogin(credentialResponse.credential);
+    if (success) {
+      toast.success('Welcome back!');
+      navigate('/dashboard');
+    } else {
+      toast.error(error || 'Google Login failed');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -118,6 +130,30 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/10"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-dark-900 text-gray-400">Or continue with</span>
+              </div>
+            </div>
+            
+            <div className="mt-6 flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => {
+                  toast.error('Google Sign-In Failed');
+                }}
+                theme="filled_black"
+                shape="rectangular"
+                text="signin_with"
+                size="large"
+              />
+            </div>
+          </div>
 
           <p className="text-gray-400 text-sm text-center mt-6">
             Don't have an account?{' '}

@@ -11,6 +11,7 @@ from typing import Optional
 from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+import httpx
 
 from app.config import settings
 from app.models.user import User
@@ -124,3 +125,76 @@ async def get_user_company(db: AsyncSession, user_id: uuid.UUID) -> Optional[Com
         select(Company).where(Company.owner_id == user_id)
     )
     return result.scalar_one_or_none()
+
+async def update_user_profile(db: AsyncSession, user_id: uuid.UUID, full_name: str) -> User:
+    """Update user profile (e.g. full_name)."""
+    user = await get_user_by_id(db, user_id)
+    if not user:
+        raise ValueError("User not found")
+    user.full_name = full_name
+    await db.flush()
+    return user
+
+async def authenticate_google_user(db: AsyncSession, token: str) -> tuple[User, Company]:
+    """Verify Google token, and either authenticate or register the user."""
+    # Verify the token with Google
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"https://oauth2.googleapis.com/tokeninfo?id_token={token}")
+        if response.status_code != 200:
+            raise ValueError("Invalid Google token")
+        token_info = response.json()
+        
+    email = token_info.get("email")
+    name = token_info.get("name")
+    if not email:
+        raise ValueError("Email not found in Google token")
+
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+
+    if user:
+        # User exists, just return their data
+        company = await get_user_company(db, user.id)
+        if not company:
+             raise ValueError("No company associated with this account")
+        return user, company
+    
+    # User does not exist, create new user and default company
+    # We don't have a password for Google Auth, so we use a dummy hash or leave it empty?
+    # Actually password_hash is not nullable. Let's create a random string hash.
+    import secrets
+    random_password = secrets.token_urlsafe(32)
+    
+    user = User(
+        email=email,
+        password_hash=hash_password(random_password),
+        full_name=name or "Google User",
+    )
+    db.add(user)
+    await db.flush()
+
+    # Create company
+    company_name = f"{user.full_name}'s Workspace"
+    slug = slugify(company_name)
+    # Ensure unique slug
+    result = await db.execute(select(Company).where(Company.slug == slug))
+    if result.scalar_one_or_none():
+        slug = f"{slug}-{str(user.id)[:8]}"
+
+    company = Company(
+        name=company_name,
+        slug=slug,
+        owner_id=user.id,
+    )
+    db.add(company)
+    await db.flush()
+
+    # Add owner as company member
+    member = CompanyMember(
+        company_id=company.id,
+        user_id=user.id,
+        role="owner",
+    )
+    db.add(member)
+
+    return user, company

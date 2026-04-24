@@ -22,6 +22,11 @@ const useAuthStore = create((set, get) => ({
     });
   },
 
+  updateUser: (user) => {
+    localStorage.setItem('raone_user', JSON.stringify(user));
+    set({ user });
+  },
+
   signup: async (data) => {
     set({ isLoading: true, error: null });
     try {
@@ -47,6 +52,37 @@ const useAuthStore = create((set, get) => ({
       return true;
     } catch (error) {
       const message = error.response?.data?.detail || 'Login failed';
+      set({ error: message, isLoading: false });
+      return false;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  googleLogin: async (credential) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authAPI.googleLogin({ token: credential });
+      const { access_token, user, company } = response.data;
+      get().setAuth(user, company, access_token);
+      return true;
+    } catch (error) {
+      const message = error.response?.data?.detail || 'Google Login failed';
+      set({ error: message, isLoading: false });
+      return false;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  updateProfile: async (data) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authAPI.updateProfile(data);
+      get().updateUser(response.data);
+      return true;
+    } catch (error) {
+      const message = error.response?.data?.detail || 'Profile update failed';
       set({ error: message, isLoading: false });
       return false;
     } finally {

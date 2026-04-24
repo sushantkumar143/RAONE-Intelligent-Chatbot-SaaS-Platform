@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
+  User,
 } from 'lucide-react';
 import { useState } from 'react';
 import useAuthStore from '../../stores/authStore';
@@ -22,6 +23,7 @@ const navItems = [
   { path: '/dashboard/knowledge', label: 'Knowledge Base', icon: Database },
   { path: '/dashboard/api-keys', label: 'API Keys', icon: Key },
   { path: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+  { path: '/dashboard/profile', label: 'Profile', icon: User },
 ];
 
 export default function DashboardLayout() {

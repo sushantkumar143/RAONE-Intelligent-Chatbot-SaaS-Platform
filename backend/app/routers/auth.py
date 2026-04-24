@@ -7,12 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.schemas.auth import SignupRequest, LoginRequest, AuthResponse, UserResponse
+from app.schemas.auth import SignupRequest, LoginRequest, AuthResponse, UserResponse, GoogleLoginRequest, ProfileUpdateRequest
 from app.services.auth_service import (
     create_user_and_company,
     authenticate_user,
     create_access_token,
     get_user_company,
+    authenticate_google_user,
+    update_user_profile,
 )
 from app.middleware.auth_middleware import get_current_user
 from app.models.user import User
@@ -71,3 +73,40 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
 async def get_profile(current_user: User = Depends(get_current_user)):
     """Get the current authenticated user's profile."""
     return UserResponse.model_validate(current_user)
+
+
+@router.post("/google", response_model=AuthResponse)
+async def google_login(data: GoogleLoginRequest, db: AsyncSession = Depends(get_db)):
+    """Authenticate user with Google ID Token."""
+    try:
+        user, company = await authenticate_google_user(db, data.token)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    token = create_access_token(user.id, user.email)
+
+    return AuthResponse(
+        access_token=token,
+        user=UserResponse.model_validate(user),
+        company=CompanyResponse.model_validate(company),
+    )
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_profile(
+    data: ProfileUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update the current authenticated user's profile."""
+    try:
+        user = await update_user_profile(db, current_user.id, data.full_name)
+        return UserResponse.model_validate(user)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
