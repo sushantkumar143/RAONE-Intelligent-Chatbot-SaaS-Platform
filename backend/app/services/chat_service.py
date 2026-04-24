@@ -163,10 +163,17 @@ async def process_chat_message(
     start_time = time.time()
     try:
         logger.info("Sending augmented prompt to LLM...")
-        ai_response_content = await generate_response(llm_messages)
+        llm_result = await generate_response(llm_messages)
+        ai_response_content = llm_result["content"]
+        input_tokens = llm_result["input_tokens"]
+        output_tokens = llm_result["output_tokens"]
+        model_used = llm_result["model"]
     except Exception as e:
         logger.error(f"LLM Generation failed: {e}")
         ai_response_content = "I'm sorry, I encountered an error while processing your request. Please try again later."
+        input_tokens = 0
+        output_tokens = 0
+        model_used = "error"
     
     response_time = time.time() - start_time
     logger.info(f"LLM replied in {response_time:.2f} seconds.")
@@ -177,7 +184,10 @@ async def process_chat_message(
         role="assistant",
         content=ai_response_content,
         response_time=response_time,
-        sources=sources_used if sources_used else None
+        sources=sources_used if sources_used else None,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        model_used=model_used
     )
     db.add(assistant_msg)
 

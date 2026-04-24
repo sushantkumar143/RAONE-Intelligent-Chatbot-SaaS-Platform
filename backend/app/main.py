@@ -54,6 +54,7 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:5173",
     ],
+    allow_origin_regex=".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -66,12 +67,12 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(company.router, prefix="/api")
 app.include_router(api_keys.router, prefix="/api")
 
-# These will be added in Phase 2+:
-from app.routers import chat, knowledge
-# from app.routers import public_chat
+# Phase 2+ routers:
+from app.routers import chat, knowledge, public_chat, analytics
 app.include_router(chat.router, prefix="/api")
 app.include_router(knowledge.router, prefix="/api")
-# app.include_router(public_chat.router, prefix="/api")
+app.include_router(public_chat.router, prefix="/api")
+app.include_router(analytics.router, prefix="/api")
 
 
 

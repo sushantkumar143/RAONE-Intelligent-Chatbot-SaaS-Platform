@@ -71,4 +71,9 @@ export const chatAPI = {
   getMessages: (conversationId) => api.get(`/chat/conversations/${conversationId}/messages`),
 };
 
+// ── Analytics API ───────────────────────────────────
+export const analyticsAPI = {
+  getStats: () => api.get('/analytics'),
+};
+
 export default api;

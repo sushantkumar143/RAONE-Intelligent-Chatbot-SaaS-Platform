@@ -12,7 +12,7 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
-async def _call_groq(messages: List[Dict], temperature: float = 0.7, max_tokens: int = 2048) -> str:
+async def _call_groq(messages: List[Dict], temperature: float = 0.7, max_tokens: int = 2048) -> Dict:
     """Call Groq API."""
     async with httpx.AsyncClient(timeout=60.0) as client:
         response = await client.post(
@@ -30,10 +30,16 @@ async def _call_groq(messages: List[Dict], temperature: float = 0.7, max_tokens:
         )
         response.raise_for_status()
         data = response.json()
-        return data["choices"][0]["message"]["content"]
+        usage = data.get("usage", {})
+        return {
+            "content": data["choices"][0]["message"]["content"],
+            "input_tokens": usage.get("prompt_tokens", 0),
+            "output_tokens": usage.get("completion_tokens", 0),
+            "model": settings.GROQ_MODEL,
+        }
 
 
-async def _call_openrouter(messages: List[Dict], temperature: float = 0.7, max_tokens: int = 2048) -> str:
+async def _call_openrouter(messages: List[Dict], temperature: float = 0.7, max_tokens: int = 2048) -> Dict:
     """Call OpenRouter API."""
     async with httpx.AsyncClient(timeout=60.0) as client:
         response = await client.post(
@@ -53,10 +59,16 @@ async def _call_openrouter(messages: List[Dict], temperature: float = 0.7, max_t
         )
         response.raise_for_status()
         data = response.json()
-        return data["choices"][0]["message"]["content"]
+        usage = data.get("usage", {})
+        return {
+            "content": data["choices"][0]["message"]["content"],
+            "input_tokens": usage.get("prompt_tokens", 0),
+            "output_tokens": usage.get("completion_tokens", 0),
+            "model": settings.OPENROUTER_MODEL,
+        }
 
 
-async def _call_huggingface(messages: List[Dict], temperature: float = 0.7, max_tokens: int = 2048) -> str:
+async def _call_huggingface(messages: List[Dict], temperature: float = 0.7, max_tokens: int = 2048) -> Dict:
     """Call HuggingFace Inference API."""
     prompt = ""
     for msg in messages:
@@ -88,12 +100,21 @@ async def _call_huggingface(messages: List[Dict], temperature: float = 0.7, max_
         )
         response.raise_for_status()
         data = response.json()
+        content = ""
         if isinstance(data, list):
-            return data[0].get("generated_text", "")
-        return data.get("generated_text", "")
+            content = data[0].get("generated_text", "")
+        else:
+            content = data.get("generated_text", "")
+            
+        return {
+            "content": content,
+            "input_tokens": len(prompt.split()) * 2,  # Rough estimate
+            "output_tokens": len(content.split()) * 2, # Rough estimate
+            "model": settings.HF_MODEL,
+        }
 
 
-async def _call_ollama(messages: List[Dict], temperature: float = 0.7, max_tokens: int = 2048) -> str:
+async def _call_ollama(messages: List[Dict], temperature: float = 0.7, max_tokens: int = 2048) -> Dict:
     """Call local Ollama instance."""
     async with httpx.AsyncClient(timeout=120.0) as client:
         response = await client.post(
@@ -110,17 +131,23 @@ async def _call_ollama(messages: List[Dict], temperature: float = 0.7, max_token
         )
         response.raise_for_status()
         data = response.json()
-        return data["message"]["content"]
+        return {
+            "content": data["message"]["content"],
+            "input_tokens": data.get("prompt_eval_count", 0),
+            "output_tokens": data.get("eval_count", 0),
+            "model": settings.OLLAMA_MODEL,
+        }
 
 
 async def generate_response(
     messages: List[Dict],
     temperature: float = 0.7,
     max_tokens: int = 2048,
-) -> str:
+) -> Dict:
     """
     Generate an LLM response using the fallback chain.
     Groq -> OpenRouter -> HuggingFace -> Ollama
+    Returns a dict containing content, input_tokens, output_tokens, and model.
     """
     providers = []
 

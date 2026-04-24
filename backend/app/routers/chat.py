@@ -6,7 +6,7 @@ API endpoints for managing conversations and messages.
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+from typing import List, Optional
 
 from app.database import get_db
 from app.middleware.auth_middleware import get_current_company
@@ -75,6 +75,22 @@ async def get_conversation_detail(
         created_at=conversation.created_at,
         messages=[MessageResponse.model_validate(m) for m in messages]
     )
+
+@router.get("/conversations/{conversation_id}/messages", response_model=List[MessageResponse])
+async def get_conversation_messages(
+    conversation_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    company: Company = Depends(get_current_company)
+):
+    """Get all messages for a specific conversation."""
+    conversation = await chat_service.get_conversation_by_id(db, conversation_id, company.id)
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found"
+        )
+    messages = await chat_service.get_conversation_messages(db, conversation_id)
+    return [MessageResponse.model_validate(m) for m in messages]
 
 @router.post("/conversations", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)
 async def create_new_conversation(
