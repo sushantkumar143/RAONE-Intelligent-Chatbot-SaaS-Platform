@@ -81,9 +81,19 @@ async def get_company_stats(
     )
     active_api_keys = ak_count.scalar() or 0
 
+    # Deactivated API keys
+    dak_count = await db.execute(
+        select(func.count(ApiKey.id)).where(
+            ApiKey.company_id == company.id,
+            ApiKey.is_active == False,
+        )
+    )
+    deactivated_api_keys = dak_count.scalar() or 0
+
     return CompanyStatsResponse(
         total_conversations=total_conversations,
         total_messages=total_messages,
         total_knowledge_sources=total_knowledge_sources,
         active_api_keys=active_api_keys,
+        deactivated_api_keys=deactivated_api_keys,
     )

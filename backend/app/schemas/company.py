@@ -36,3 +36,4 @@ class CompanyStatsResponse(BaseModel):
     total_messages: int = 0
     total_knowledge_sources: int = 0
     active_api_keys: int = 0
+    deactivated_api_keys: int = 0

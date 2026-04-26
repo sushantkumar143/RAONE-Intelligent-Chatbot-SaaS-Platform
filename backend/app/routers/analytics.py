@@ -36,6 +36,11 @@ async def get_analytics(
     )
     active_keys = api_keys_result.scalar_one_or_none() or 0
 
+    deactivated_keys_result = await db.execute(
+        select(func.count(ApiKey.id)).where(ApiKey.company_id == company_id, ApiKey.is_active == False)
+    )
+    deactivated_keys = deactivated_keys_result.scalar_one_or_none() or 0
+
     # 2. Get all conversations for the company
     conversations_result = await db.execute(
         select(Conversation.id).where(Conversation.company_id == company_id)
@@ -49,7 +54,8 @@ async def get_analytics(
                 "requests": 0,
                 "tokens": 0,
                 "avgLatency": 0.0,
-                "activeKeys": active_keys
+                "activeKeys": active_keys,
+                "deactivatedKeys": deactivated_keys
             },
             "apiUsage": [],
             "tokenUsage": [],
@@ -161,7 +167,8 @@ async def get_analytics(
             "requests": total_requests,
             "tokens": total_tokens,
             "avgLatency": round(avg_latency, 2),
-            "activeKeys": active_keys
+            "activeKeys": active_keys,
+            "deactivatedKeys": deactivated_keys
         },
         "apiUsage": api_usage,
         "tokenUsage": token_usage,

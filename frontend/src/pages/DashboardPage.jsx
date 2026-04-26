@@ -8,8 +8,39 @@ const statCards = [
   { label: 'Total Conversations', key: 'total_conversations', icon: MessageSquare, color: 'from-primary-500 to-blue-600' },
   { label: 'Total Messages', key: 'total_messages', icon: BarChart3, color: 'from-accent-500 to-teal-600' },
   { label: 'Knowledge Sources', key: 'total_knowledge_sources', icon: Database, color: 'from-purple-500 to-violet-600' },
-  { label: 'Active API Keys', key: 'active_api_keys', icon: Key, color: 'from-amber-500 to-orange-600' },
+  { label: 'Active API Keys', key: 'active_api_keys', icon: Key, color: 'from-amber-500 to-orange-600', extraKey: 'deactivated_api_keys', extraLabel: 'Deactivated' },
 ];
+
+function AnimatedCounter({ value }) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (value === undefined || value === null) return;
+    let startTime;
+    let animationFrame;
+    const duration = 2000; // 2 seconds
+
+    const updateCounter = (timestamp) => {
+      if (!startTime) startTime = timestamp;
+      const progress = timestamp - startTime;
+      
+      // easeOutExpo (starts fast, ends slow)
+      const easeProgress = progress >= duration ? 1 : 1 - Math.pow(2, -10 * progress / duration);
+      
+      if (progress < duration) {
+        setCount(Math.floor(value * easeProgress));
+        animationFrame = requestAnimationFrame(updateCounter);
+      } else {
+        setCount(value);
+      }
+    };
+
+    animationFrame = requestAnimationFrame(updateCounter);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [value]);
+
+  return <span>{count}</span>;
+}
 
 export default function DashboardPage() {
   const [stats, setStats] = useState(null);
@@ -63,10 +94,22 @@ export default function DashboardPage() {
               </div>
               <TrendingUp className="w-4 h-4 text-green-400" />
             </div>
-            <p className="text-2xl font-bold text-white">
-              {loading ? '—' : stats?.[card.key] ?? 0}
-            </p>
-            <p className="text-sm text-gray-400 mt-1">{card.label}</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-white">
+                  {loading ? '—' : <AnimatedCounter value={stats?.[card.key] ?? 0} />}
+                </p>
+                <p className="text-sm text-gray-400 mt-1">{card.label}</p>
+              </div>
+              {card.extraKey && !loading && stats && (
+                <div className="text-right">
+                  <p className="text-lg font-semibold text-gray-400">
+                    <AnimatedCounter value={stats[card.extraKey] ?? 0} />
+                  </p>
+                  <p className="text-[10px] uppercase tracking-wider text-red-400/80 mt-1 font-bold">{card.extraLabel}</p>
+                </div>
+              )}
+            </div>
           </motion.div>
         ))}
       </div>
