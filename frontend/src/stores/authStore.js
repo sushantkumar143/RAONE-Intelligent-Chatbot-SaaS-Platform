@@ -27,6 +27,11 @@ const useAuthStore = create((set, get) => ({
     set({ user });
   },
 
+  updateCompany: (company) => {
+    localStorage.setItem('raone_company', JSON.stringify(company));
+    set({ company });
+  },
+
   signup: async (data) => {
     set({ isLoading: true, error: null });
     try {

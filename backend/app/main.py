@@ -68,11 +68,12 @@ app.include_router(company.router, prefix="/api")
 app.include_router(api_keys.router, prefix="/api")
 
 # Phase 2+ routers:
-from app.routers import chat, knowledge, public_chat, analytics
+from app.routers import chat, knowledge, public_chat, analytics, payments
 app.include_router(chat.router, prefix="/api")
 app.include_router(knowledge.router, prefix="/api")
 app.include_router(public_chat.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
+app.include_router(payments.router, prefix="/api")
 
 
 

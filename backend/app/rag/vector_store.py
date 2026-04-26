@@ -194,3 +194,83 @@ class VectorStore:
         self.metadata = remaining_meta
         self._save()
         logger.info(f"Index rebuilt. Remaining vectors: {self.index.ntotal}")
+
+    def hybrid_search(self, query_text: str, query_embedding: List[float], top_k: int = 8) -> List[Dict[str, Any]]:
+        """
+        Premium Tier Feature: Hybrid Search
+        Combines FAISS dense vector search with BM25 sparse keyword search using
+        Reciprocal Rank Fusion (RRF).
+        """
+        if self.index.ntotal == 0 or not self.metadata:
+            logger.info(f"Index is empty for company {self.company_id}, skipping search.")
+            return []
+
+        logger.info(f"Executing Hybrid Search for company {self.company_id}")
+        fetch_k = min(top_k * 2, self.index.ntotal)
+
+        # 1. FAISS Search
+        query_vector = np.array([query_embedding]).astype('float32')
+        faiss.normalize_L2(query_vector)
+        faiss_scores, faiss_indices = self.index.search(query_vector, fetch_k)
+        
+        faiss_results = {}
+        for rank, (score, idx) in enumerate(zip(faiss_scores[0], faiss_indices[0])):
+            if idx == -1: continue
+            idx_str = str(idx)
+            if idx_str in self.metadata:
+                faiss_results[idx_str] = {"rank": rank + 1, "score": float(score)}
+
+        # 2. BM25 Keyword Search
+        try:
+            from rank_bm25 import BM25Okapi
+            
+            # Prepare corpus
+            doc_ids = list(self.metadata.keys())
+            corpus = [self.metadata[doc_id]["content"] for doc_id in doc_ids]
+            tokenized_corpus = [doc.lower().split() for doc in corpus]
+            bm25 = BM25Okapi(tokenized_corpus)
+            
+            tokenized_query = query_text.lower().split()
+            bm25_scores = bm25.get_scores(tokenized_query)
+            
+            # Get top fetch_k from BM25
+            top_bm25_indices = np.argsort(bm25_scores)[::-1][:fetch_k]
+            bm25_results = {}
+            for rank, idx in enumerate(top_bm25_indices):
+                doc_id = doc_ids[idx]
+                bm25_results[doc_id] = {"rank": rank + 1, "score": bm25_scores[idx]}
+                
+        except ImportError:
+            logger.warning("rank_bm25 not installed, falling back to FAISS only")
+            bm25_results = {}
+
+        # 3. Reciprocal Rank Fusion (RRF)
+        # Formula: RRF_score = 1 / (k + rank)
+        rrf_k = 60
+        fused_scores = {}
+        
+        all_doc_ids = set(faiss_results.keys()).union(set(bm25_results.keys()))
+        for doc_id in all_doc_ids:
+            score = 0.0
+            if doc_id in faiss_results:
+                score += 1.0 / (rrf_k + faiss_results[doc_id]["rank"])
+            if doc_id in bm25_results:
+                score += 1.0 / (rrf_k + bm25_results[doc_id]["rank"])
+            fused_scores[doc_id] = score
+            
+        # Sort by fused score
+        sorted_fused = sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)[:fetch_k]
+        
+        # Format candidates
+        candidates = []
+        for doc_id, score in sorted_fused:
+            meta = self.metadata[doc_id]
+            candidates.append({
+                "content": meta["content"],
+                "source_name": meta["source_name"],
+                "relevance_score": score,
+                "chunk_index": meta["chunk_index"]
+            })
+            
+        logger.info(f"Hybrid search returned {len(candidates)} candidates.")
+        return candidates

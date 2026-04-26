@@ -6,12 +6,15 @@ import useAuthStore from './stores/authStore';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import KnowledgeBasePage from './pages/KnowledgeBasePage';
 import ApiKeysPage from './pages/ApiKeysPage';
 import ChatPage from './pages/ChatPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import ProfilePage from './pages/ProfilePage';
+import TeamPage from './pages/TeamPage';
+import HelpPage from './pages/HelpPage';
 
 // Layout
 import DashboardLayout from './components/dashboard/DashboardLayout';
@@ -56,6 +59,14 @@ export default function App() {
             </PublicRoute>
           }
         />
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicRoute>
+              <ForgotPasswordPage />
+            </PublicRoute>
+          }
+        />
 
         {/* Protected Dashboard Routes */}
         <Route
@@ -71,6 +82,8 @@ export default function App() {
           <Route path="api-keys" element={<ApiKeysPage />} />
           <Route path="chat" element={<ChatPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="team" element={<TeamPage />} />
+          <Route path="help" element={<HelpPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 

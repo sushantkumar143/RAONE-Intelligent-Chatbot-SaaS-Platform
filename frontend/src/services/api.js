@@ -39,6 +39,9 @@ export const authAPI = {
   googleLogin: (data) => api.post('/auth/google', data),
   getProfile: () => api.get('/auth/me'),
   updateProfile: (data) => api.patch('/auth/me', data),
+  forgotPassword: (data) => api.post('/auth/forgot-password', data),
+  verifyOTP: (data) => api.post('/auth/verify-otp', data),
+  resetPassword: (data) => api.post('/auth/reset-password', data),
 };
 
 // ── Company API ─────────────────────────────────────
@@ -76,6 +79,7 @@ export const chatAPI = {
 // ── Analytics API ───────────────────────────────────
 export const analyticsAPI = {
   getStats: () => api.get('/analytics'),
+  getUsageWidget: () => api.get('/analytics/usage-widget'),
 };
 
 export default api;

@@ -1,27 +1,20 @@
 import asyncio
-import logging
 from sqlalchemy import text
 from app.database import engine
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 async def migrate():
-    logger.info("Starting database migration to add analytics fields to messages table...")
-    try:
-        async with engine.begin() as conn:
-            # Add input_tokens column if not exists
-            await conn.execute(text("ALTER TABLE messages ADD COLUMN IF NOT EXISTS input_tokens INTEGER;"))
-            
-            # Add output_tokens column if not exists
-            await conn.execute(text("ALTER TABLE messages ADD COLUMN IF NOT EXISTS output_tokens INTEGER;"))
-            
-            # Add model_used column if not exists
-            await conn.execute(text("ALTER TABLE messages ADD COLUMN IF NOT EXISTS model_used VARCHAR(100);"))
-            
-            logger.info("Migration successful: Added input_tokens, output_tokens, and model_used columns to messages table.")
-    except Exception as e:
-        logger.error(f"Migration failed: {e}")
+    async with engine.begin() as conn:
+        try:
+            # Adding the column. We use IF NOT EXISTS if supported, but in Postgres for columns, 
+            # we just catch the duplicate column exception if it's already there.
+            # Using text execution.
+            await conn.execute(text("ALTER TABLE companies ADD COLUMN subscription_plan VARCHAR(50) DEFAULT 'free';"))
+            print("Successfully added 'subscription_plan' column to 'companies' table.")
+        except Exception as e:
+            if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+                print("'subscription_plan' column already exists.")
+            else:
+                print(f"Error during migration: {e}")
 
 if __name__ == "__main__":
     asyncio.run(migrate())

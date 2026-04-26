@@ -28,6 +28,17 @@ class GoogleLoginRequest(BaseModel):
 class ProfileUpdateRequest(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=255)
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp_code: str = Field(..., min_length=6, max_length=6)
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp_code: str = Field(..., min_length=6, max_length=6)
+    new_password: str = Field(..., min_length=8, max_length=128)
 
 # ── Response Schemas ─────────────────────────────────────
 

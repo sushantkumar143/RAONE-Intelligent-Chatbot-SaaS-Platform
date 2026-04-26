@@ -58,6 +58,22 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:5173"
     BACKEND_URL: str = "http://localhost:8000"
 
+    # ── Email Settings ───────────────────────────────────
+    MAIL_USERNAME: Optional[str] = None
+    MAIL_PASSWORD: Optional[str] = None
+    MAIL_FROM: Optional[str] = None
+    MAIL_PORT: int = 587
+    MAIL_SERVER: str = "smtp.gmail.com"
+    MAIL_FROM_NAME: str = "RAONE Platform"
+    MAIL_STARTTLS: bool = True
+    MAIL_SSL_TLS: bool = False
+    USE_CREDENTIALS: bool = True
+    VALIDATE_CERTS: bool = True
+
+    # ── Razorpay ─────────────────────────────────────────
+    RAZORPAY_KEY_ID: Optional[str] = None
+    RAZORPAY_KEY_SECRET: Optional[str] = None
+
     class Config:
         env_file = str(_env_file)
         env_file_encoding = "utf-8"

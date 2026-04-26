@@ -7,7 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.schemas.auth import SignupRequest, LoginRequest, AuthResponse, UserResponse, GoogleLoginRequest, ProfileUpdateRequest
+from app.schemas.auth import (
+    SignupRequest, LoginRequest, AuthResponse, UserResponse,
+    GoogleLoginRequest, ProfileUpdateRequest, ForgotPasswordRequest,
+    VerifyOTPRequest, ResetPasswordRequest
+)
 from app.services.auth_service import (
     create_user_and_company,
     authenticate_user,
@@ -15,7 +19,11 @@ from app.services.auth_service import (
     get_user_company,
     authenticate_google_user,
     update_user_profile,
+    generate_password_reset_otp,
+    verify_password_reset_otp,
+    reset_password,
 )
+from app.services.email_service import send_reset_password_email
 from app.middleware.auth_middleware import get_current_user
 from app.models.user import User
 from app.schemas.company import CompanyResponse
@@ -105,6 +113,49 @@ async def update_profile(
     try:
         user = await update_user_profile(db, current_user.id, data.full_name)
         return UserResponse.model_validate(user)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+@router.post("/forgot-password")
+async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Generate an OTP and send it via email."""
+    try:
+        otp_code = await generate_password_reset_otp(db, data.email)
+        await send_reset_password_email(data.email, otp_code)
+        return {"message": "If your email is registered, an OTP has been sent."}
+    except ValueError as e:
+        # Don't reveal if user exists or not for security, but we do for now to aid debugging
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to send email: {str(e)}"
+        )
+
+@router.post("/verify-otp")
+async def verify_otp(data: VerifyOTPRequest, db: AsyncSession = Depends(get_db)):
+    """Verify the provided OTP."""
+    try:
+        await verify_password_reset_otp(db, data.email, data.otp_code)
+        return {"message": "OTP verified successfully"}
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+@router.post("/reset-password")
+async def perform_reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Reset the password after verifying the OTP again."""
+    try:
+        await reset_password(db, data.email, data.otp_code, data.new_password)
+        return {"message": "Password reset successfully"}
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
