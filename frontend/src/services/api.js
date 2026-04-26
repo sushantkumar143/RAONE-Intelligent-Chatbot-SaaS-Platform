@@ -79,6 +79,7 @@ export const chatAPI = {
 // ── Analytics API ───────────────────────────────────
 export const analyticsAPI = {
   getStats: () => api.get('/analytics'),
+  getUsageWidget: () => api.get('/analytics/usage-widget'),
 };
 
 export default api;

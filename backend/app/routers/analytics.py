@@ -168,3 +168,36 @@ async def get_analytics(
         "modelPerformance": model_performance,
         "endpointDistribution": endpoint_distribution
     }
+
+from app.models.knowledge_source import KnowledgeSource
+
+@router.get("/analytics/usage-widget")
+async def get_usage_widget(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get lightweight usage statistics for the sidebar widget."""
+    company = await get_user_company(db, current_user.id)
+    if not company:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No company found")
+    
+    # Calculate limits based on plan
+    plan = company.subscription_plan
+    if plan == "ultra_pro":
+        doc_limit = 999999
+    elif plan == "pro":
+        doc_limit = 100
+    else:
+        doc_limit = 10
+        
+    # Count documents
+    docs_result = await db.execute(
+        select(func.count(KnowledgeSource.id)).where(KnowledgeSource.company_id == company.id)
+    )
+    doc_count = docs_result.scalar_one_or_none() or 0
+    
+    return {
+        "documents_count": doc_count,
+        "documents_limit": doc_limit,
+        "plan": plan
+    }
