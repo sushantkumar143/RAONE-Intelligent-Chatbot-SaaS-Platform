@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Plus, MessageSquare, Bot, User, Loader2 } from 'lucide-react';
+import { Send, Plus, MessageSquare, Bot, User, Loader2, Mic } from 'lucide-react';
 import { chatAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
@@ -11,10 +11,81 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  
   const messagesEndRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const accumulatedTranscriptRef = useRef('');
+  const originalInputRef = useRef('');
 
-  useEffect(() => { loadConversations(); }, []);
+  useEffect(() => {
+    loadConversations();
+    
+    // Initialize Speech Recognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+
+      recognitionRef.current.onresult = (event) => {
+        let currentInterim = '';
+        let currentFinal = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            currentFinal += event.results[i][0].transcript;
+          } else {
+            currentInterim += event.results[i][0].transcript;
+          }
+        }
+        
+        if (currentFinal) {
+          accumulatedTranscriptRef.current += ' ' + currentFinal.trim();
+        }
+
+        const combinedText = (originalInputRef.current + ' ' + accumulatedTranscriptRef.current + ' ' + currentInterim).trim();
+        setInput(combinedText);
+      };
+
+      recognitionRef.current.onerror = (event) => {
+        console.error('Speech recognition error', event.error);
+        setIsRecording(false);
+        if (event.error === 'not-allowed') {
+          toast.error('Microphone access denied.');
+        }
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsRecording(false);
+        const finalCombinedText = (originalInputRef.current + ' ' + accumulatedTranscriptRef.current).trim();
+        if (finalCombinedText) setInput(finalCombinedText);
+        accumulatedTranscriptRef.current = '';
+      };
+    }
+  }, []);
+
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  const toggleRecording = () => {
+    if (!recognitionRef.current) {
+      toast.error('Voice recognition is not supported in this browser. Try Chrome or Safari.');
+      return;
+    }
+
+    if (isRecording) {
+      recognitionRef.current.stop();
+      toast.success('Recording stopped.');
+    } else {
+      originalInputRef.current = input;
+      accumulatedTranscriptRef.current = '';
+      try {
+        recognitionRef.current.start();
+        setIsRecording(true);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
 
   const loadConversations = async () => {
     try {
@@ -169,22 +240,50 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t border-white/5">
-          <div className="flex gap-3">
-            <input
-              id="chat-input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-              placeholder="Ask anything..."
-              className="input-field flex-1"
-              disabled={sending}
-            />
+        <div className="p-4 border-t border-white/5 relative">
+          <div className="flex gap-3 items-center">
+            <div className="flex-1 relative flex items-center">
+              <input
+                id="chat-input"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                placeholder="Ask anything..."
+                className={`input-field w-full transition-all ${isRecording ? 'pr-28 border-red-500/50 bg-red-500/5 shadow-[0_0_15px_rgba(239,68,68,0.1)_inset]' : ''}`}
+                disabled={sending}
+              />
+              {isRecording && (
+                <div className="absolute right-4 flex items-center gap-2 pointer-events-none">
+                  <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest hidden sm:block">Listening</span>
+                  <div className="flex gap-1 items-center h-4">
+                    {[...Array(4)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        animate={{ height: ['4px', '14px', '4px'] }}
+                        transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.15, ease: "easeInOut" }}
+                        className="w-1 bg-red-500 rounded-full"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={toggleRecording}
+              className={`p-3 rounded-xl transition-all border flex-shrink-0 ${
+                isRecording 
+                  ? 'bg-red-500/20 border-red-500/50 text-red-500 animate-pulse' 
+                  : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
+              }`}
+              title={isRecording ? "Stop Recording" : "Start Voice Recording"}
+            >
+              <Mic className="w-5 h-5" />
+            </button>
             <button
               id="chat-send"
               onClick={sendMessage}
               disabled={sending || !input.trim()}
-              className="btn-primary px-4 disabled:opacity-50"
+              className="btn-primary px-4 disabled:opacity-50 flex-shrink-0"
             >
               <Send className="w-5 h-5" />
             </button>

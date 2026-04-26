@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Key, Plus, Copy, Trash2, Check, Shield } from 'lucide-react';
+import { Key, Plus, Copy, Trash2, Check, Shield, AlertTriangle, Sparkles } from 'lucide-react';
 import { apiKeysAPI } from '../services/api';
+import useAuthStore from '../stores/authStore';
 import toast from 'react-hot-toast';
 
 export default function ApiKeysPage() {
@@ -11,6 +12,9 @@ export default function ApiKeysPage() {
   const [newKeyName, setNewKeyName] = useState('');
   const [createdKey, setCreatedKey] = useState(null);
   const [copied, setCopied] = useState(false);
+
+  const { company } = useAuthStore();
+  const isFreeTier = company?.subscription_plan === 'free' || !company?.subscription_plan;
 
   useEffect(() => { loadKeys(); }, []);
 
@@ -64,10 +68,38 @@ export default function ApiKeysPage() {
           <h1 className="text-2xl font-bold text-white">API Keys</h1>
           <p className="text-gray-400 mt-1">Manage API keys for your integrations</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2">
+        <button 
+          onClick={() => isFreeTier ? toast.error('API Keys are restricted to Pro plans.') : setShowCreate(true)} 
+          className={`btn-primary flex items-center gap-2 ${isFreeTier ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+        >
           <Plus className="w-4 h-4" /> Generate Key
         </button>
       </div>
+
+      {/* Free Tier Notification */}
+      {isFreeTier && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card p-5 mb-6 border-red-500/30 bg-red-500/5 flex items-start gap-4"
+        >
+          <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-1">
+            <AlertTriangle className="w-5 h-5 text-red-400" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-white">API Access Restricted</h3>
+            <p className="text-gray-400 mt-1 text-sm leading-relaxed">
+              You are currently on the Free Tier. API Key generation is locked. To integrate the RAONE engine directly into your own applications, please upgrade your subscription to Pro or Ultra Pro.
+            </p>
+            <button 
+              onClick={() => toast('Click the Premium Upgrade button in the sidebar!', { icon: '⭐', style: { background: '#18181b', color: '#fff' } })}
+              className="mt-4 bg-gradient-to-r from-primary-500 to-accent-500 text-white font-semibold text-sm py-2 px-5 rounded-lg flex items-center gap-2 shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:opacity-90 transition-opacity"
+            >
+              <Sparkles className="w-4 h-4" /> Upgrade to Premium
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Created Key Display */}
       {createdKey && (
