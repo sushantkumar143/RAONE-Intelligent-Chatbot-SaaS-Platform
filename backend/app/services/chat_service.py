@@ -94,13 +94,23 @@ async def process_chat_message(
     db.add(user_msg)
     await db.flush()
 
-    # 2.5 Perform Vector Retrieval + Reranking
+    # 2.5 Fetch Company to check subscription plan
+    from app.models.company import Company
+    company = await db.execute(select(Company).where(Company.id == company_id))
+    company_obj = company.scalar_one_or_none()
+    plan = company_obj.subscription_plan if company_obj else "free"
+
+    # 2.6 Perform Vector Retrieval + Reranking
     logger.info("Generating query embedding for RAG retrieval...")
     query_embedding = generate_single_embedding(message_text)
     
-    logger.info("Stage 1: Searching vector store (bi-encoder)...")
     store = VectorStore(company_id=str(company_id))
-    candidates = store.search(query_embedding, top_k=8) 
+    if plan in ["pro", "ultra_pro"]:
+        logger.info(f"Stage 1: Premium Hybrid Search for plan {plan}...")
+        candidates = store.hybrid_search(message_text, query_embedding, top_k=8)
+    else:
+        logger.info("Stage 1: Searching vector store (bi-encoder)...")
+        candidates = store.search(query_embedding, top_k=8) 
     
     # Stage 2: Rerank with cross-encoder for precision
     from app.rag.vector_store import rerank_results

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User as UserIcon, Mail, Building2, Save } from 'lucide-react';
+import { User as UserIcon, Mail, Building2, Save, CreditCard, Calendar, AlertTriangle } from 'lucide-react';
 import useAuthStore from '../stores/authStore';
 import toast from 'react-hot-toast';
+import api from '../services/api';
 
 export default function ProfilePage() {
-  const { user, company, updateProfile, isLoading } = useAuthStore();
+  const { user, company, updateProfile, isLoading, updateCompany } = useAuthStore();
+  const [isCancelling, setIsCancelling] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
   });
@@ -31,6 +33,26 @@ export default function ProfilePage() {
     const success = await updateProfile({ full_name: formData.full_name });
     if (success) {
       toast.success('Profile updated successfully');
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!window.confirm('Are you sure you want to cancel your premium subscription? You will lose access to Hybrid Search immediately.')) {
+      return;
+    }
+    
+    setIsCancelling(true);
+    try {
+      const res = await api.post('/payments/downgrade-free');
+      if (res.data.status === 'success') {
+        updateCompany({ ...company, subscription_plan: 'free', subscription_expires_at: null });
+        toast.success('Subscription cancelled successfully');
+      }
+    } catch (error) {
+      toast.error('Failed to cancel subscription');
+      console.error(error);
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -130,6 +152,68 @@ export default function ProfilePage() {
               </button>
             </div>
           </form>
+        </motion.div>
+
+        {/* Subscription Details Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="glass-card p-6"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-lg bg-primary-500/20 flex items-center justify-center text-primary-400">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-white">Subscription Details</h2>
+              <p className="text-sm text-gray-400">Manage your current plan</p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-dark-900 border border-white/5 rounded-xl p-5">
+                <div className="text-sm text-gray-400 mb-1">Current Plan</div>
+                <div className="text-lg font-bold text-white capitalize">
+                  {company?.subscription_plan === 'pro' ? 'RAONE Pro' : 
+                   company?.subscription_plan === 'ultra_pro' ? 'RAONE Ultra Pro' : 'Free Tier'}
+                </div>
+              </div>
+              
+              <div className="bg-dark-900 border border-white/5 rounded-xl p-5">
+                <div className="flex items-center gap-2 text-sm text-gray-400 mb-1">
+                  <Calendar className="w-4 h-4" />
+                  Expiry Date
+                </div>
+                <div className="text-lg font-bold text-white">
+                  {company?.subscription_expires_at 
+                    ? new Date(company.subscription_expires_at).toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })
+                    : 'Lifetime (Free)'}
+                </div>
+              </div>
+            </div>
+
+            {company?.subscription_plan !== 'free' && (
+              <div className="pt-4 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-start gap-3 text-amber-400/80 max-w-md">
+                  <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm">Canceling your subscription will immediately revert your workspace to the Free Tier.</p>
+                </div>
+                <button
+                  onClick={handleCancelSubscription}
+                  disabled={isCancelling}
+                  className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 whitespace-nowrap"
+                >
+                  {isCancelling ? 'Canceling...' : 'Cancel Subscription'}
+                </button>
+              </div>
+            )}
+          </div>
         </motion.div>
       </div>
     </div>

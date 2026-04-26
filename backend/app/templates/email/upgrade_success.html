@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #fff; padding: 40px; margin: 0; }
+        .container { max-width: 600px; margin: 0 auto; background: #18181b; padding: 40px; border-radius: 16px; border: 1px solid #27272a; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .logo { font-size: 24px; font-weight: bold; background: linear-gradient(to right, #6366f1, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .content { font-size: 16px; line-height: 1.6; color: #a1a1aa; }
+        .highlight { color: #fff; font-weight: bold; }
+        .box { background: #09090b; border: 1px solid #27272a; padding: 20px; border-radius: 12px; margin: 25px 0; text-align: center; }
+        .footer { margin-top: 40px; font-size: 14px; color: #71717a; text-align: center; }
+        .btn { display: inline-block; padding: 12px 24px; background: linear-gradient(to right, #4f46e5, #9333ea); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">⚡ RAONE</div>
+        </div>
+        <div class="content">
+            <h2 style="color: white;">Welcome to Premium!</h2>
+            <p>Hi <span class="highlight">{{ full_name }}</span>,</p>
+            <p>Thank you for upgrading your RAONE workspace! Your account has successfully been upgraded to the <span class="highlight">{{ plan_name }}</span> plan.</p>
+            
+            <div class="box">
+                <h3 style="margin-top: 0; color: #a855f7;">Your Subscription Details</h3>
+                <p style="margin: 5px 0;"><strong>Plan:</strong> {{ plan_name }}</p>
+                <p style="margin: 5px 0;"><strong>Active Until:</strong> <span class="highlight" style="color: #4ade80;">{{ expiry_date }}</span></p>
+            </div>
+            
+            <p>You now have access to advanced RAG capabilities, higher accuracy responses, and premium embeddings for all your knowledge base interactions.</p>
+            
+            <div style="text-align: center;">
+                <a href="http://localhost:5173/dashboard" class="btn">Go to Dashboard</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>If you have any questions, reply to this email or contact support.</p>
+            <p>&copy; 2026 RAONE Inc. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

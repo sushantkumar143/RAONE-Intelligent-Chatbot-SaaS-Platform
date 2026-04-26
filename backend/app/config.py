@@ -70,6 +70,10 @@ class Settings(BaseSettings):
     USE_CREDENTIALS: bool = True
     VALIDATE_CERTS: bool = True
 
+    # ── Razorpay ─────────────────────────────────────────
+    RAZORPAY_KEY_ID: Optional[str] = None
+    RAZORPAY_KEY_SECRET: Optional[str] = None
+
     class Config:
         env_file = str(_env_file)
         env_file_encoding = "utf-8"

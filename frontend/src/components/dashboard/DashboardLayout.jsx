@@ -13,9 +13,11 @@ import {
   ChevronRight,
   Menu,
   User,
+  Sparkles,
 } from 'lucide-react';
 import { useState } from 'react';
 import useAuthStore from '../../stores/authStore';
+import SubscriptionModal from './SubscriptionModal';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -29,6 +31,7 @@ const navItems = [
 export default function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const { user, company, logout } = useAuthStore();
   const navigate = useNavigate();
 
@@ -91,6 +94,25 @@ export default function DashboardLayout() {
           ))}
         </nav>
 
+        {/* Premium Upgrade Button */}
+        <div className="px-4 py-2 mt-auto">
+          <button
+            onClick={() => setIsSubscriptionModalOpen(true)}
+            className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold transition-all ${
+              company?.subscription_plan === 'free' || !company?.subscription_plan
+                ? 'bg-gradient-to-r from-primary-500 to-accent-500 text-white hover:shadow-[0_0_20px_-5px_rgba(99,102,241,0.5)]'
+                : 'bg-white/10 text-white hover:bg-white/20'
+            }`}
+          >
+            <Sparkles className="w-5 h-5 flex-shrink-0" />
+            {!collapsed && (
+              <span>
+                {company?.subscription_plan === 'pro' ? 'Pro Plan' : company?.subscription_plan === 'ultra_pro' ? 'Ultra Pro Plan' : 'Upgrade to Pro'}
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* User Section */}
         <div className="p-3 border-t border-white/5">
           {!collapsed && (
@@ -129,9 +151,23 @@ export default function DashboardLayout() {
           </button>
           <div className="flex-1" />
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white text-sm font-bold">
-              {user?.full_name?.[0]?.toUpperCase() || 'U'}
-            </div>
+            {(company?.subscription_plan === 'pro' || company?.subscription_plan === 'ultra_pro') ? (
+              <div className="flex items-center pl-1 pr-3 py-1 gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 shadow-[0_0_15px_-3px_rgba(251,191,36,0.15)]">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold shadow-inner">
+                  {user?.full_name?.[0]?.toUpperCase() || 'U'}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-400" />
+                  <span className="text-[10px] font-bold text-amber-400 tracking-wider">
+                    {company?.subscription_plan === 'ultra_pro' ? 'ULTRA PRO' : 'PRO'}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white text-sm font-bold shadow-lg">
+                {user?.full_name?.[0]?.toUpperCase() || 'U'}
+              </div>
+            )}
           </div>
         </header>
 
@@ -140,6 +176,11 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+
+      <SubscriptionModal 
+        isOpen={isSubscriptionModalOpen} 
+        onClose={() => setIsSubscriptionModalOpen(false)} 
+      />
     </div>
   );
 }

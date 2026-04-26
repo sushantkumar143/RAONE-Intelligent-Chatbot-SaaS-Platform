@@ -6,6 +6,9 @@ from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from app.config import settings
 import os
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Provide a fallback for MAIL_USERNAME/PASSWORD if not set, to avoid startup crash
 conf = ConnectionConfig(
@@ -37,3 +40,26 @@ async def send_reset_password_email(email_to: str, otp_code: str):
     
     fm = FastMail(conf)
     await fm.send_message(message, template_name="reset_password.html")
+
+async def send_subscription_upgrade_email(email_to: str, full_name: str, plan_name: str, expiry_date: str):
+    """Send an email confirming the subscription upgrade."""
+    if not settings.MAIL_USERNAME or not settings.MAIL_PASSWORD:
+        logger.warning("Email credentials not configured. Skipping subscription email.")
+        return
+
+    message = MessageSchema(
+        subject="Welcome to RAONE Premium!",
+        recipients=[email_to],
+        template_body={
+            "full_name": full_name,
+            "plan_name": plan_name.upper().replace("_", " "),
+            "expiry_date": expiry_date
+        },
+        subtype=MessageType.html
+    )
+    
+    try:
+        fm = FastMail(conf)
+        await fm.send_message(message, template_name="upgrade_success.html")
+    except Exception as e:
+        logger.error(f"Failed to send upgrade email: {e}")
