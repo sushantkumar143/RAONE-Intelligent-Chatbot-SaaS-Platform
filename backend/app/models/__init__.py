@@ -9,6 +9,7 @@ from app.models.api_key import ApiKey
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.knowledge_source import KnowledgeSource
+from app.models.password_reset import PasswordResetOTP
 
 __all__ = [
     "User",
@@ -18,4 +19,5 @@ __all__ = [
     "Conversation",
     "Message",
     "KnowledgeSource",
+    "PasswordResetOTP",
 ]

@@ -198,3 +198,79 @@ async def authenticate_google_user(db: AsyncSession, token: str) -> tuple[User, 
     db.add(member)
 
     return user, company
+
+import random
+from app.models.password_reset import PasswordResetOTP
+
+async def generate_password_reset_otp(db: AsyncSession, email: str) -> str:
+    """Generate a 6-digit OTP for password reset."""
+    # First, verify user exists
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise ValueError("User not found")
+
+    # Generate 6-digit OTP
+    otp_code = f"{random.randint(0, 999999):06d}"
+    
+    # Expires in 90 seconds
+    expires_at = datetime.now(timezone.utc) + timedelta(seconds=90)
+    
+    otp_record = PasswordResetOTP(
+        email=email,
+        otp_code=otp_code,
+        expires_at=expires_at,
+    )
+    db.add(otp_record)
+    await db.flush()
+    
+    return otp_code
+
+async def verify_password_reset_otp(db: AsyncSession, email: str, otp_code: str) -> bool:
+    """Verify the provided OTP."""
+    result = await db.execute(
+        select(PasswordResetOTP)
+        .where(PasswordResetOTP.email == email)
+        .where(PasswordResetOTP.otp_code == otp_code)
+        .where(PasswordResetOTP.is_used == False)
+        .order_by(PasswordResetOTP.created_at.desc())
+    )
+    otp_record = result.scalars().first()
+    
+    if not otp_record:
+        raise ValueError("Invalid OTP")
+        
+    if datetime.now(timezone.utc) > otp_record.expires_at:
+        raise ValueError("OTP has expired")
+        
+    return True
+
+async def reset_password(db: AsyncSession, email: str, otp_code: str, new_password: str) -> User:
+    """Reset the password after verifying the OTP again to mark it used."""
+    result = await db.execute(
+        select(PasswordResetOTP)
+        .where(PasswordResetOTP.email == email)
+        .where(PasswordResetOTP.otp_code == otp_code)
+        .where(PasswordResetOTP.is_used == False)
+        .order_by(PasswordResetOTP.created_at.desc())
+    )
+    otp_record = result.scalars().first()
+    
+    if not otp_record:
+        raise ValueError("Invalid OTP")
+        
+    if datetime.now(timezone.utc) > otp_record.expires_at:
+        raise ValueError("OTP has expired")
+        
+    # Mark as used
+    otp_record.is_used = True
+    
+    # Find user and update password
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise ValueError("User not found")
+        
+    user.password_hash = hash_password(new_password)
+    await db.flush()
+    return user
