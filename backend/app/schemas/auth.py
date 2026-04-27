@@ -74,3 +74,10 @@ class AuthResponse(BaseModel):
 class TokenData(BaseModel):
     user_id: UUID
     email: str
+
+
+class AdminLoginRequest(BaseModel):
+    username: str
+    password: str
+    secret_key: str
+

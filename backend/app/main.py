@@ -75,6 +75,10 @@ app.include_router(public_chat.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 app.include_router(payments.router, prefix="/api")
 
+# Admin router
+from app.routers import admin
+app.include_router(admin.router, prefix="/api")
+
 
 
 

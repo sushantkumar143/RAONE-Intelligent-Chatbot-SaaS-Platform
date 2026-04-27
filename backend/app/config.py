@@ -74,6 +74,11 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_ID: Optional[str] = None
     RAZORPAY_KEY_SECRET: Optional[str] = None
 
+    # ── Admin Panel ──────────────────────────────────────
+    ADMIN_USERNAME: str = "raone_admin"
+    ADMIN_PASSWORD: str = "admin@raone2026"
+    ADMIN_SECRET_KEY: str = "RAONE-SUPER-SECRET-ADMIN-KEY"
+
     class Config:
         env_file = str(_env_file)
         env_file_encoding = "utf-8"

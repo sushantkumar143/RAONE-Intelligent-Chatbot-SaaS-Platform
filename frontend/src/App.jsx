@@ -19,6 +19,13 @@ import HelpPage from './pages/HelpPage';
 // Layout
 import DashboardLayout from './components/dashboard/DashboardLayout';
 
+// Admin Module
+import AdminLayout from './admin/AdminLayout';
+import AdminDashboard from './admin/pages/AdminDashboard';
+import AdminUsers from './admin/pages/AdminUsers';
+import AdminCompanies from './admin/pages/AdminCompanies';
+import AdminCompanyDetail from './admin/pages/AdminCompanyDetail';
+
 // Protected Route Wrapper
 function ProtectedRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -29,6 +36,13 @@ function ProtectedRoute({ children }) {
 function PublicRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
+// Admin Protected Route
+function AdminProtectedRoute({ children }) {
+  const adminToken = localStorage.getItem('raone_admin_token');
+  if (!adminToken) return <Navigate to="/login" replace />;
   return children;
 }
 
@@ -43,14 +57,7 @@ export default function App() {
         <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <LoginPage />
-            </PublicRoute>
-          }
-        />
+        <Route path="/login" element={<LoginPage />} />
         <Route
           path="/signup"
           element={
@@ -85,6 +92,21 @@ export default function App() {
           <Route path="team" element={<TeamPage />} />
           <Route path="help" element={<HelpPage />} />
           <Route path="profile" element={<ProfilePage />} />
+        </Route>
+
+        {/* Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <AdminProtectedRoute>
+              <AdminLayout />
+            </AdminProtectedRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="companies" element={<AdminCompanies />} />
+          <Route path="companies/:id" element={<AdminCompanyDetail />} />
         </Route>
 
         {/* Catch-all */}

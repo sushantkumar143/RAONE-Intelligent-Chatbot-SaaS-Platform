@@ -10,7 +10,7 @@ from app.database import get_db
 from app.schemas.auth import (
     SignupRequest, LoginRequest, AuthResponse, UserResponse,
     GoogleLoginRequest, ProfileUpdateRequest, ForgotPasswordRequest,
-    VerifyOTPRequest, ResetPasswordRequest
+    VerifyOTPRequest, ResetPasswordRequest, AdminLoginRequest
 )
 from app.services.auth_service import (
     create_user_and_company,
@@ -66,6 +66,12 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No company associated with this account",
+        )
+
+    if getattr(company, 'is_blacklisted', False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your organization has been suspended. Contact support for assistance.",
         )
 
     token = create_access_token(user.id, user.email)
@@ -161,3 +167,37 @@ async def perform_reset_password(data: ResetPasswordRequest, db: AsyncSession = 
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+
+@router.post("/admin-login")
+async def admin_login(data: AdminLoginRequest):
+    """Authenticate admin using env-based credentials."""
+    from app.config import settings as app_settings
+    from jose import jwt
+    from datetime import datetime, timedelta, timezone
+
+    if (
+        data.username != app_settings.ADMIN_USERNAME
+        or data.password != app_settings.ADMIN_PASSWORD
+        or data.secret_key != app_settings.ADMIN_SECRET_KEY
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid admin credentials",
+        )
+
+    expire = datetime.now(timezone.utc) + timedelta(hours=12)
+    payload = {
+        "sub": data.username,
+        "role": "admin",
+        "exp": expire,
+        "iat": datetime.now(timezone.utc),
+    }
+    token = jwt.encode(payload, app_settings.JWT_SECRET_KEY, algorithm=app_settings.JWT_ALGORITHM)
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "role": "admin",
+        "username": data.username,
+    }

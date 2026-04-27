@@ -5,6 +5,7 @@ Async SQLAlchemy setup with PostgreSQL.
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import text
 from app.config import settings
 
 engine = create_async_engine(
@@ -40,9 +41,16 @@ async def get_db() -> AsyncSession:
 
 
 async def init_db():
-    """Create all tables on startup."""
+    """Create all tables on startup and add missing columns."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Add new columns to existing tables (create_all won't alter existing tables)
+        try:
+            await conn.execute(
+                text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS is_blacklisted BOOLEAN DEFAULT FALSE")
+            )
+        except Exception:
+            pass  # Column may already exist
 
 
 async def close_db():

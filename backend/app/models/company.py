@@ -25,6 +25,7 @@ class Company(Base):
     settings: Mapped[dict] = mapped_column(JSON, default=dict)
     subscription_plan: Mapped[str] = mapped_column(String(50), default="free")
     subscription_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_blacklisted: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
