@@ -99,6 +99,7 @@ async def process_chat_message(
     company = await db.execute(select(Company).where(Company.id == company_id))
     company_obj = company.scalar_one_or_none()
     plan = company_obj.subscription_plan if company_obj else "free"
+    account_type = company_obj.settings.get("account_type", "business") if company_obj and company_obj.settings else "business"
 
     # 2.6 Perform Vector Retrieval + Reranking
     logger.info("Generating query embedding for RAG retrieval...")
@@ -134,6 +135,28 @@ async def process_chat_message(
         context_str = "\n\n".join(context_parts)
     else:
         logger.info("No relevant chunks found in the knowledge base.")
+
+    if not context_str and account_type == "personal":
+        logger.info("No RAG context found for personal user. Performing real-time web search...")
+        try:
+            from duckduckgo_search import DDGS
+            with DDGS() as ddgs:
+                results = list(ddgs.text(message_text, max_results=3))
+            
+            if results:
+                web_parts = []
+                for i, res in enumerate(results):
+                    web_parts.append(f"[Web Source {i+1}: {res['title']}]\nURL: {res['href']}\n{res['body']}")
+                    sources_used.append({
+                        "source_name": res['title'] + " (Web)",
+                        "relevance_score": 1.0,
+                        "content": res['body'][:100] + "...",
+                        "chunk_index": i
+                    })
+                context_str = "\n\n".join(web_parts)
+                logger.info(f"Web search successful. Found {len(results)} results.")
+        except Exception as e:
+            logger.error(f"Web search failed: {e}")
 
     # 3. Prepare message history for LLM with STRICT extraction prompt
     history = await get_conversation_messages(db, conversation_id)

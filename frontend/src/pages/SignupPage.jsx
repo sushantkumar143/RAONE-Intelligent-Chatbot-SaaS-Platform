@@ -7,6 +7,7 @@ import useAuthStore from '../stores/authStore';
 import toast from 'react-hot-toast';
 
 export default function SignupPage() {
+  const [accountType, setAccountType] = useState('personal');
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -39,7 +40,12 @@ export default function SignupPage() {
       toast.error('Password must be at least 8 characters');
       return;
     }
-    const success = await signup(formData);
+    const payload = {
+      ...formData,
+      account_type: accountType,
+      company_name: accountType === 'personal' ? `${formData.full_name}'s Space` : formData.company_name
+    };
+    const success = await signup(payload);
     if (success) {
       toast.success('Account created! Welcome to RAONE');
       navigate('/dashboard');
@@ -76,6 +82,32 @@ export default function SignupPage() {
           <p className="text-gray-400 text-center mb-8">Start building your AI chatbot today</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Account Type Toggle */}
+            <div className="flex bg-dark-800 p-1 rounded-xl mb-6 border border-white/5">
+              <button
+                type="button"
+                onClick={() => setAccountType('personal')}
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${
+                  accountType === 'personal'
+                    ? 'bg-primary-500 text-white shadow-lg'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                Personal
+              </button>
+              <button
+                type="button"
+                onClick={() => setAccountType('business')}
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${
+                  accountType === 'business'
+                    ? 'bg-primary-500 text-white shadow-lg'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                Business
+              </button>
+            </div>
+
             {/* Full Name */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Full Name</label>
@@ -113,22 +145,24 @@ export default function SignupPage() {
             </div>
 
             {/* Company Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Company Name</label>
-              <div className="relative">
-                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                <input
-                  id="signup-company"
-                  name="company_name"
-                  type="text"
-                  value={formData.company_name}
-                  onChange={handleChange}
-                  placeholder="Your Company"
-                  className="input-field pl-12"
-                  required
-                />
+            {accountType === 'business' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Company Name</label>
+                <div className="relative">
+                  <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                  <input
+                    id="signup-company"
+                    name="company_name"
+                    type="text"
+                    value={formData.company_name}
+                    onChange={handleChange}
+                    placeholder="Your Company"
+                    className="input-field pl-12"
+                    required={accountType === 'business'}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Password */}
             <div>

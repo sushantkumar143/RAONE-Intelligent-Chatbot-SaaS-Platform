@@ -17,9 +17,9 @@ export default function AdminUsers() {
     if (!search.trim()) { setFiltered(users); return; }
     const q = search.toLowerCase();
     setFiltered(users.filter(u =>
-      u.full_name.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      u.company?.name.toLowerCase().includes(q)
+      (u.full_name || '').toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q) ||
+      (u.company?.name || '').toLowerCase().includes(q)
     ));
   }, [search, users]);
 

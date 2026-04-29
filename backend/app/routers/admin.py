@@ -90,7 +90,7 @@ async def list_all_users(
         company_result = await db.execute(
             select(Company).where(Company.owner_id == u.id)
         )
-        company = company_result.scalar_one_or_none()
+        company = company_result.scalars().first()
 
         user_list.append({
             "id": str(u.id),

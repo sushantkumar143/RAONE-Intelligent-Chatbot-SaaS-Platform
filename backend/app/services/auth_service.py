@@ -85,6 +85,7 @@ async def create_user_and_company(
         name=signup_data.company_name,
         slug=slug,
         owner_id=user.id,
+        settings={"account_type": signup_data.account_type}
     )
     db.add(company)
     await db.flush()
@@ -124,7 +125,7 @@ async def get_user_company(db: AsyncSession, user_id: uuid.UUID) -> Optional[Com
     result = await db.execute(
         select(Company).where(Company.owner_id == user_id)
     )
-    return result.scalar_one_or_none()
+    return result.scalars().first()
 
 async def update_user_profile(db: AsyncSession, user_id: uuid.UUID, full_name: str) -> User:
     """Update user profile (e.g. full_name)."""
@@ -185,6 +186,7 @@ async def authenticate_google_user(db: AsyncSession, token: str) -> tuple[User, 
         name=company_name,
         slug=slug,
         owner_id=user.id,
+        settings={"account_type": "personal"}
     )
     db.add(company)
     await db.flush()

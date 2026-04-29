@@ -16,6 +16,7 @@ class SignupRequest(BaseModel):
     password: str = Field(..., min_length=8, max_length=128)
     full_name: str = Field(..., min_length=2, max_length=255)
     company_name: str = Field(..., min_length=2, max_length=255)
+    account_type: str = Field(default="business")
 
 
 class LoginRequest(BaseModel):
