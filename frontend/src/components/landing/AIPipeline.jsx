@@ -1,270 +1,152 @@
-import { useRef } from 'react';
-import { motion, useInView } from 'framer-motion';
+import { useRef, useEffect, useState } from 'react';
+import { motion, useInView, useAnimation } from 'framer-motion';
 import {
-  MessageSquare, Globe, Search, Database, Brain, Bot, Sparkles,
+  MessageSquare, Brain, Bot, Sparkles, Database, Globe, Wrench, ChevronRight
 } from 'lucide-react';
 
-const pipelineNodes = [
-  {
-    icon: MessageSquare,
-    title: 'User Query',
-    label: 'Input',
-    color: 'from-blue-500 to-blue-600',
-    glow: 'rgba(59,130,246,0.4)',
-    desc: 'Natural language question',
-  },
-  {
-    icon: Globe,
-    title: 'API Gateway',
-    label: 'Routing',
-    color: 'from-cyan-500 to-teal-500',
-    glow: 'rgba(6,182,212,0.4)',
-    desc: 'Auth & rate limiting',
-  },
-  {
-    icon: Search,
-    title: 'RAG Engine',
-    label: 'Embedding',
-    color: 'from-violet-500 to-purple-600',
-    glow: 'rgba(139,92,246,0.4)',
-    desc: 'Semantic search & retrieval',
-  },
-  {
-    icon: Database,
-    title: 'Vector DB',
-    label: 'Retrieval',
-    color: 'from-emerald-500 to-green-600',
-    glow: 'rgba(16,185,129,0.4)',
-    desc: 'Similarity matching',
-  },
-  {
-    icon: Brain,
-    title: 'LLM',
-    label: 'Reasoning',
-    color: 'from-amber-500 to-orange-500',
-    glow: 'rgba(245,158,11,0.4)',
-    desc: 'Context-aware generation',
-  },
-  {
-    icon: Bot,
-    title: 'Agent',
-    label: 'Execution',
-    color: 'from-rose-500 to-pink-600',
-    glow: 'rgba(244,63,94,0.4)',
-    desc: 'Tool calling & actions',
-  },
-  {
-    icon: Sparkles,
-    title: 'Response',
-    label: 'Response Generation',
-    color: 'from-primary-500 to-accent-500',
-    glow: 'rgba(59,130,246,0.4)',
-    desc: 'Intelligent answer delivered',
-  },
+const chainSteps = [
+  { id: 'query', icon: MessageSquare, label: 'User Query', info: '"Analyze data"', type: 'input', color: 'from-blue-500 to-cyan-500' },
+  { id: 'agent', icon: Bot, label: 'Agent Plan', info: 'Reasoning...', type: 'agent', color: 'from-violet-500 to-purple-600' },
+  { id: 'tool1', icon: Database, label: 'Vector Tool', info: 'Query Docs', type: 'tool', color: 'from-emerald-500 to-teal-500' },
+  { id: 'tool2', icon: Globe, label: 'Web Tool', info: 'Fetch API', type: 'tool', color: 'from-amber-500 to-orange-500' },
+  { id: 'synth', icon: Brain, label: 'Synthesize', info: 'Combine data', type: 'agent', color: 'from-rose-500 to-pink-600' },
+  { id: 'response', icon: Sparkles, label: 'Response', info: 'Final answer', type: 'output', color: 'from-primary-500 to-accent-500' },
 ];
 
-/* ── Single Pipeline Node ──────────────────────────── */
-function PipelineNode({ node, index, isInView }) {
-  const delay = index * 0.25;
-  const Icon = node.icon;
+function ChainNode({ step, index, activeIndex }) {
+  const isActive = index <= activeIndex;
+  const isCurrent = index === activeIndex;
+  const isTool = step.type === 'tool';
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30, scale: 0.8 }}
-      animate={
-        isInView
-          ? { opacity: 1, y: 0, scale: 1 }
-          : { opacity: 0, y: 30, scale: 0.8 }
-      }
-      transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
-      className="flex flex-col items-center relative group"
-    >
-      {/* Glow ring */}
+    <div className="relative flex flex-col items-center">
+      {/* Node */}
       <motion.div
-        className="absolute w-20 h-20 rounded-2xl"
-        initial={{ opacity: 0 }}
-        animate={
-          isInView
-            ? {
-                opacity: [0, 0.6, 0.3],
-                scale: [0.8, 1.2, 1],
-              }
-            : {}
-        }
-        transition={{ duration: 1.2, delay: delay + 0.3 }}
-        style={{
-          boxShadow: `0 0 40px ${node.glow}, 0 0 80px ${node.glow}`,
-          top: '0',
+        layout
+        className={`relative z-10 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center transition-all duration-500 ${
+          isActive ? `bg-gradient-to-br ${step.color} shadow-lg shadow-${step.color.split('-')[1]}-500/30` : 'bg-white/[0.03] border border-white/[0.08]'
+        }`}
+        animate={{
+          scale: isCurrent ? 1.15 : isActive ? 1 : 0.9,
+          y: isTool && isActive ? -10 : 0,
         }}
-      />
-
-      {/* Node card */}
-      <motion.div
-        className={`relative w-20 h-20 rounded-2xl bg-gradient-to-br ${node.color} flex items-center justify-center shadow-lg cursor-default`}
-        whileHover={{ scale: 1.12, rotate: 3 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       >
-        <Icon className="w-8 h-8 text-white" />
+        <step.icon className={`w-7 h-7 sm:w-8 sm:h-8 transition-colors duration-500 ${isActive ? 'text-white' : 'text-gray-500'}`} />
+        
+        {/* Tool Badge */}
+        {isTool && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: isActive ? 1 : 0, scale: isActive ? 1 : 0 }}
+            className="absolute -top-3 -right-3 bg-dark-950 p-1.5 rounded-lg border border-white/[0.1]"
+          >
+            <Wrench className={`w-3 h-3 text-${step.color.split('-')[1]}-400`} />
+          </motion.div>
+        )}
 
-        {/* Pulse ring animation */}
-        <motion.div
-          className="absolute inset-0 rounded-2xl border-2"
-          style={{ borderColor: node.glow }}
-          initial={{ opacity: 0, scale: 1 }}
-          animate={
-            isInView
-              ? {
-                  opacity: [0.8, 0],
-                  scale: [1, 1.5],
-                }
-              : {}
-          }
-          transition={{
-            duration: 2,
-            delay: delay + 0.5,
-            repeat: Infinity,
-            repeatDelay: 3,
-          }}
-        />
+        {/* Pulse effect when current */}
+        {isCurrent && (
+          <motion.div
+            className="absolute inset-0 rounded-2xl border-2 border-white"
+            initial={{ opacity: 0.8, scale: 1 }}
+            animate={{ opacity: 0, scale: 1.5 }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          />
+        )}
       </motion.div>
 
-      {/* Label chip */}
+      {/* Info Tag */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={isInView ? { opacity: 1, y: 0 } : {}}
-        transition={{ duration: 0.4, delay: delay + 0.3 }}
-        className="mt-3 px-3 py-1 rounded-full bg-white/[0.06] border border-white/[0.08] text-[10px] font-semibold uppercase tracking-wider text-gray-400"
+        className="mt-4 text-center"
+        animate={{ opacity: isActive ? 1 : 0.3, y: isActive ? 0 : 5 }}
       >
-        {node.label}
-      </motion.div>
-
-      {/* Title */}
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={isInView ? { opacity: 1 } : {}}
-        transition={{ duration: 0.4, delay: delay + 0.4 }}
-        className="mt-2 text-sm font-semibold text-white"
-      >
-        {node.title}
-      </motion.p>
-
-      {/* Description */}
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={isInView ? { opacity: 1 } : {}}
-        transition={{ duration: 0.4, delay: delay + 0.5 }}
-        className="mt-1 text-[11px] text-gray-500 text-center max-w-[120px]"
-      >
-        {node.desc}
-      </motion.p>
-    </motion.div>
-  );
-}
-
-/* ── Animated Connector ────────────────────────────── */
-function Connector({ index, isInView, isVertical }) {
-  const delay = index * 0.25 + 0.15;
-
-  if (isVertical) {
-    return (
-      <div className="flex flex-col items-center py-2">
-        <motion.div
-          className="w-px h-10 relative overflow-hidden"
-          initial={{ opacity: 0 }}
-          animate={isInView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.4, delay }}
-        >
-          {/* Line */}
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-b from-primary-500/50 to-accent-500/50"
-            initial={{ scaleY: 0 }}
-            animate={isInView ? { scaleY: 1 } : {}}
-            transition={{ duration: 0.5, delay }}
-            style={{ transformOrigin: 'top' }}
-          />
-          {/* Data packet */}
-          <motion.div
-            className="absolute left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary-400 shadow-[0_0_8px_rgba(59,130,246,0.8)]"
-            initial={{ top: '-10%', opacity: 0 }}
-            animate={
-              isInView
-                ? { top: ['0%', '100%'], opacity: [0, 1, 1, 0] }
-                : {}
-            }
-            transition={{
-              duration: 1,
-              delay: delay + 0.5,
-              repeat: Infinity,
-              repeatDelay: 2.5,
-            }}
-          />
-        </motion.div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center justify-center px-1">
-      <motion.div
-        className="relative h-px w-10 lg:w-14 overflow-hidden"
-        initial={{ opacity: 0 }}
-        animate={isInView ? { opacity: 1 } : {}}
-        transition={{ duration: 0.4, delay }}
-      >
-        {/* Line */}
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-primary-500/50 to-accent-500/50"
-          initial={{ scaleX: 0 }}
-          animate={isInView ? { scaleX: 1 } : {}}
-          transition={{ duration: 0.5, delay }}
-          style={{ transformOrigin: 'left' }}
-        />
-        {/* Arrow head */}
-        <motion.div
-          className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0"
-          style={{
-            borderTop: '4px solid transparent',
-            borderBottom: '4px solid transparent',
-            borderLeft: '6px solid rgba(59,130,246,0.6)',
-          }}
-          initial={{ opacity: 0 }}
-          animate={isInView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.3, delay: delay + 0.3 }}
-        />
-        {/* Data packet */}
-        <motion.div
-          className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-primary-400 shadow-[0_0_8px_rgba(59,130,246,0.8)]"
-          initial={{ left: '-10%', opacity: 0 }}
-          animate={
-            isInView
-              ? { left: ['0%', '100%'], opacity: [0, 1, 1, 0] }
-              : {}
-          }
-          transition={{
-            duration: 0.8,
-            delay: delay + 0.6,
-            repeat: Infinity,
-            repeatDelay: 2.5,
-          }}
-        />
+        <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${isActive ? 'text-white' : 'text-gray-500'}`}>
+          {step.label}
+        </div>
+        <div className={`text-[11px] px-2 py-0.5 rounded-full border ${
+          isActive ? 'bg-white/10 border-white/20 text-gray-300' : 'bg-transparent border-white/[0.05] text-gray-600'
+        }`}>
+          {step.info}
+        </div>
       </motion.div>
     </div>
   );
 }
 
-/* ── Main Pipeline Section ─────────────────────────── */
+function ChainConnector({ index, activeIndex }) {
+  const isFilled = index < activeIndex;
+
+  return (
+    <div className="flex-1 flex items-center justify-center min-w-[20px] sm:min-w-[40px] px-2">
+      <div className="relative w-full h-1 bg-white/[0.05] rounded-full overflow-hidden">
+        <motion.div
+          className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary-500 to-accent-500"
+          initial={{ width: '0%' }}
+          animate={{ width: isFilled ? '100%' : '0%' }}
+          transition={{ duration: 0.4, ease: "linear" }}
+        />
+      </div>
+      <motion.div 
+        animate={{ color: isFilled ? '#06b6d4' : 'rgba(255,255,255,0.1)' }}
+        className="absolute"
+      >
+        <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+      </motion.div>
+    </div>
+  );
+}
+
+function VerticalConnector({ index, activeIndex }) {
+  const isFilled = index < activeIndex;
+
+  return (
+    <div className="flex justify-center h-8 my-2">
+      <div className="relative w-1 h-full bg-white/[0.05] rounded-full overflow-hidden">
+        <motion.div
+          className="absolute top-0 left-0 w-full bg-gradient-to-b from-primary-500 to-accent-500"
+          initial={{ height: '0%' }}
+          animate={{ height: isFilled ? '100%' : '0%' }}
+          transition={{ duration: 0.4, ease: "linear" }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function AIPipeline() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
+  const [activeIndex, setActiveIndex] = useState(-1);
+
+  useEffect(() => {
+    if (isInView) {
+      let current = 0;
+      const interval = setInterval(() => {
+        if (current <= chainSteps.length) {
+          setActiveIndex(current);
+          current++;
+        } else {
+          clearInterval(interval);
+          // Loop animation after a delay
+          setTimeout(() => {
+            setActiveIndex(-1);
+            setTimeout(() => setActiveIndex(0), 500);
+          }, 4000);
+        }
+      }, 800); // 800ms per step
+      return () => clearInterval(interval);
+    }
+  }, [isInView, activeIndex === chainSteps.length]);
 
   return (
-    <section id="pipeline" className="py-28 px-6 relative overflow-hidden">
+    <section id="pipeline" className="py-28 px-4 sm:px-6 relative overflow-hidden">
       {/* Background glow */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-primary-500/[0.04] rounded-full blur-[150px]" />
       </div>
 
-      <div className="max-w-7xl mx-auto relative" ref={ref}>
+      <div className="max-w-6xl mx-auto relative" ref={ref}>
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -273,67 +155,64 @@ export default function AIPipeline() {
           className="text-center mb-16"
         >
           <span className="text-primary-400 text-sm font-semibold uppercase tracking-widest">
-            AI Pipeline
+            Agentic Chain
           </span>
-          <h2 className="text-4xl sm:text-5xl font-bold text-white mt-3 mb-4">
-            How Your Query{' '}
-            <span className="gradient-text">Comes to Life</span>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mt-3 mb-4">
+            How Your Query <span className="gradient-text">Comes to Life</span>
           </h2>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Watch your question travel through our intelligent pipeline — from
-            input to insight in milliseconds.
+          <p className="text-gray-400 text-base sm:text-lg max-w-2xl mx-auto">
+            Watch the AI agent autonomously chain tools together to synthesize the perfect response.
           </p>
         </motion.div>
 
-        {/* Pipeline — Desktop (horizontal) */}
-        <div className="hidden lg:flex items-start justify-center">
-          {pipelineNodes.map((node, i) => (
-            <div key={node.title} className="flex items-start">
-              <PipelineNode node={node} index={i} isInView={isInView} />
-              {i < pipelineNodes.length - 1 && (
-                <div className="mt-10">
-                  <Connector index={i} isInView={isInView} isVertical={false} />
-                </div>
-              )}
-            </div>
-          ))}
+        {/* Pipeline Container */}
+        <div className="glass-card p-6 sm:p-10 border border-white/[0.08]">
+          
+          {/* Desktop/Tablet Horizontal Chain */}
+          <div className="hidden md:flex items-start justify-between w-full">
+            {chainSteps.map((step, i) => (
+              <div key={step.id} className="flex items-start flex-1 last:flex-none">
+                <ChainNode step={step} index={i} activeIndex={activeIndex} />
+                {i < chainSteps.length - 1 && (
+                  <div className="flex-1 mt-8">
+                    <ChainConnector index={i} activeIndex={activeIndex} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Mobile Vertical Chain */}
+          <div className="md:hidden flex flex-col items-center">
+            {chainSteps.map((step, i) => (
+              <div key={step.id} className="w-full flex flex-col items-center">
+                <ChainNode step={step} index={i} activeIndex={activeIndex} />
+                {i < chainSteps.length - 1 && (
+                  <VerticalConnector index={i} activeIndex={activeIndex} />
+                )}
+              </div>
+            ))}
+          </div>
+
         </div>
 
-        {/* Pipeline — Tablet (2-row) */}
-        <div className="hidden md:grid lg:hidden grid-cols-4 gap-8 justify-items-center">
-          {pipelineNodes.map((node, i) => (
-            <PipelineNode key={node.title} node={node} index={i} isInView={isInView} />
-          ))}
-        </div>
-
-        {/* Pipeline — Mobile (vertical) */}
-        <div className="md:hidden flex flex-col items-center">
-          {pipelineNodes.map((node, i) => (
-            <div key={node.title} className="flex flex-col items-center">
-              <PipelineNode node={node} index={i} isInView={isInView} />
-              {i < pipelineNodes.length - 1 && (
-                <Connector index={i} isInView={isInView} isVertical={true} />
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Bottom status bar */}
+        {/* Status indicator */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 2 }}
-          className="mt-16 text-center"
+          initial={{ opacity: 0 }}
+          animate={isInView ? { opacity: 1 } : {}}
+          transition={{ delay: 1 }}
+          className="mt-12 flex justify-center"
         >
-          <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium">
-            <motion.div
-              animate={{ scale: [1, 1.3, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="w-2 h-2 rounded-full bg-emerald-400"
-            />
-            Average response time: 0.8s
+          <div className="glass px-4 py-2 rounded-full flex items-center gap-2 text-sm border border-white/[0.05]">
+            <div className={`w-2 h-2 rounded-full ${activeIndex >= chainSteps.length ? 'bg-green-500' : 'bg-primary-500 animate-pulse'}`} />
+            <span className="text-gray-300">
+              {activeIndex < 0 ? 'Waiting...' : 
+               activeIndex >= chainSteps.length ? 'Task Complete (0.8s)' : 
+               `Executing: ${chainSteps[activeIndex]?.label}`}
+            </span>
           </div>
         </motion.div>
+
       </div>
     </section>
   );

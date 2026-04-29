@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Zap, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, Zap, ArrowRight, CheckCircle2, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
+import PasswordStrengthMeter, { isPasswordStrong } from '../components/auth/PasswordStrengthMeter';
 
 export default function ForgotPasswordPage() {
   const [step, setStep] = useState(1);
@@ -11,6 +12,8 @@ export default function ForgotPasswordPage() {
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const navigate = useNavigate();
@@ -56,7 +59,7 @@ export default function ForgotPasswordPage() {
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    if (password.length < 8) return toast.error('Password must be at least 8 characters');
+    if (!isPasswordStrong(password)) return toast.error('Please meet all password requirements');
     if (password !== confirmPassword) return toast.error('Passwords do not match');
     setIsLoading(true);
     try {
@@ -196,29 +199,44 @@ export default function ForgotPasswordPage() {
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                       <input
-                        type="password"
+                        type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Min 8 characters"
-                        className="input-field pl-12"
+                        placeholder="Create a strong password"
+                        className="input-field pl-12 pr-12"
                         required
                         minLength={8}
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition"
+                      >
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
                     </div>
+                    <PasswordStrengthMeter password={password} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Confirm Password</label>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                       <input
-                        type="password"
+                        type={showConfirmPassword ? 'text' : 'password'}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="Confirm password"
-                        className="input-field pl-12"
+                        className="input-field pl-12 pr-12"
                         required
                         minLength={8}
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
                     </div>
                   </div>
                   <button

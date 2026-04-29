@@ -5,6 +5,7 @@ import { Mail, Lock, User, Building2, Eye, EyeOff, Zap } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import useAuthStore from '../stores/authStore';
 import toast from 'react-hot-toast';
+import PasswordStrengthMeter, { isPasswordStrong } from '../components/auth/PasswordStrengthMeter';
 
 export default function SignupPage() {
   const [accountType, setAccountType] = useState('personal');
@@ -36,8 +37,8 @@ export default function SignupPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     clearError();
-    if (formData.password.length < 8) {
-      toast.error('Password must be at least 8 characters');
+    if (!isPasswordStrong(formData.password)) {
+      toast.error('Please meet all password requirements');
       return;
     }
     const payload = {
@@ -175,7 +176,7 @@ export default function SignupPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="Min 8 characters"
+                  placeholder="Create a strong password"
                   className="input-field pl-12 pr-12"
                   required
                   minLength={8}
@@ -188,6 +189,7 @@ export default function SignupPage() {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              <PasswordStrengthMeter password={formData.password} />
             </div>
 
             {/* Error */}
