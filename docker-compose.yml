@@ -17,12 +17,14 @@ services:
   backend:
     build: ./backend
     restart: always
-    environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-raone}
-      GROQ_API_KEY: ${GROQ_API_KEY}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-raone-super-secret-key}
+    # environment:
+    #   DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-raone}
+    #   GROQ_API_KEY: ${GROQ_API_KEY}
+    #   OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+    #   HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}
+    #   JWT_SECRET_KEY: ${JWT_SECRET_KEY:-raone-super-secret-key}
+    env_file:
+      - .env
     volumes:
       - backend_uploads:/app/uploads
       - faiss_data:/app/data/faiss_indices
@@ -36,6 +38,8 @@ services:
       args:
         VITE_API_URL: /api
     restart: always
+    env_file:
+      - .env
     ports:
       - "80:80"
     depends_on:
