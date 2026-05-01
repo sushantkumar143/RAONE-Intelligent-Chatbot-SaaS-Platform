@@ -24,7 +24,7 @@ services:
     #   HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}
     #   JWT_SECRET_KEY: ${JWT_SECRET_KEY:-raone-super-secret-key}
     env_file:
-      - .env
+      - ./backend/.env
     volumes:
       - backend_uploads:/app/uploads
       - faiss_data:/app/data/faiss_indices
@@ -39,7 +39,7 @@ services:
         VITE_API_URL: /api
     restart: always
     env_file:
-      - .env
+      - ./frontend/.env
     ports:
       - "80:80"
     depends_on:
