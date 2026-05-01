@@ -5,23 +5,65 @@ pipeline {
 
         stage('Clone Code') {
             steps {
-                git 'https://github.com/YOUR_USERNAME/YOUR_REPO.git'
+                git 'https://github.com/sushantkumar143/RAONE-Intelligent-Chatbot-SaaS-Platform.git'
             }
         }
 
-        stage('Stop Old Containers') {
+        stage('Inject Backend .env') {
             steps {
-                sh 'docker-compose down || true'
+                withCredentials([file(credentialsId: 'raone-env-file', variable: 'ENV_FILE')]) {
+                    sh '''
+                    echo "Injecting backend .env..."
+                    cp $ENV_FILE backend/.env
+                    ls -la backend/
+                    '''
+                }
             }
         }
 
-        stage('Build & Start Containers') {
+        stage('Inject Frontend .env (Optional)') {
             steps {
-                sh 'docker-compose up --build -d'
+                withCredentials([file(credentialsId: 'raone-env-file-frontend', variable: 'ENV_FILE_FRONT')]) {
+                    sh '''
+                    echo "Injecting frontend .env..."
+                    cp $ENV_FILE_FRONT frontend/.env || true
+                    ls -la frontend/
+                    '''
+                }
             }
         }
 
-        stage('Verify Running') {
+        stage('Debug Paths') {
+            steps {
+                sh '''
+                echo "Checking backend env:"
+                ls -la backend/
+
+                echo "Checking frontend env:"
+                ls -la frontend/
+                '''
+            }
+        }
+
+        stage('Docker Cleanup') {
+            steps {
+                sh 'docker compose down --remove-orphans || true'
+            }
+        }
+
+        stage('Build & Deploy') {
+            steps {
+                sh 'docker compose up --build -d --force-recreate'
+            }
+        }
+
+        stage('Verify Backend Env') {
+            steps {
+                sh 'docker compose exec backend printenv | grep -i KEY || true'
+            }
+        }
+
+        stage('Check Running Containers') {
             steps {
                 sh 'docker ps'
             }
