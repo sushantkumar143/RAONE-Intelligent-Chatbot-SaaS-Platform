@@ -37,6 +37,14 @@ RAONE is a sophisticated, multi-tenant AI Chatbot SaaS platform designed for hig
 - **Embeddings**: `all-MiniLM-L6-v2` (Sentence-Transformers).
 - **Search**: Hybrid search (FAISS Vector Search + BM25 Keyword Search).
 
+### Deployment
+- **Git**: Version control and collaboration for managing codebase and tracking changes.
+- **Docker**: Containerization of services to ensure consistent environments across development and production.
+- **Jenkins**: Automation server for building, testing, and deploying applications via pipelines.
+- **AWS**: Cloud infrastructure for hosting services, scaling applications, and managing resources.
+- **CI/CD**: Automated pipelines for continuous integration and continuous deployment. 
+- **Microservices Architecture**: Multi-container setup with independently deployable services.
+
 ---
 
 ## 🧠 RAG Pipeline & Models
